@@ -17,20 +17,27 @@ jobs:
       - name: Install Chromium dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64
+          sudo apt-get install -y ffmpeg libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64
 
       - name: Install and Render Video
         run: |
-          if [ -f "remotion-expired-pills/package.json" ]; then
-            cd remotion-expired-pills
-          fi
+          # Automatically find the folder containing package.json and src/
+          PROJECT_DIR=$(dirname $(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1))
+          echo "Found project in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+
+          # Install dependencies and ensure @remotion/cli is present
           npm install
-          npx remotion render Main out/video.mp4
+          npm install --no-save @remotion/cli
+
+          # Render using @remotion/cli (auto-detects entry point and first composition if Main isn't found)
+          npx @remotion/cli render src/index.ts ExpiredPillsVideo out/video.mp4 || npx @remotion/cli render src/index.ts Main out/video.mp4 || npx @remotion/cli render out/video.mp4
 
       - name: Upload Rendered Video
         uses: actions/upload-artifact@v4
         with:
           name: rendered-video
           path: |
-            out/video.mp4
-            remotion-expired-pills/out/video.mp4
+            **/out/video.mp4
+            **/*.mp4
+            !**/public/*.mp4
